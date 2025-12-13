@@ -1,0 +1,69 @@
+from tortoise import BaseDBAsyncClient
+
+RUN_IN_TRANSACTION = True
+
+
+async def upgrade(db: BaseDBAsyncClient) -> str:
+    return """
+        CREATE TABLE IF NOT EXISTS `employees` (
+    `id` INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    `user_id` INT NOT NULL,
+    `name` VARCHAR(191) NOT NULL,
+    `role` VARCHAR(100),
+    `is_active` BOOL NOT NULL DEFAULT 1
+) CHARACTER SET utf8mb4;
+CREATE TABLE IF NOT EXISTS `orders` (
+    `id` INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    `user_id` INT,
+    `total` DECIMAL(10,2) NOT NULL,
+    `created_at` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    `updated_at` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6)
+) CHARACTER SET utf8mb4;
+CREATE TABLE IF NOT EXISTS `products` (
+    `id` INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    `name` VARCHAR(191) NOT NULL,
+    `description` LONGTEXT,
+    `price` DECIMAL(10,2) NOT NULL,
+    `created_at` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    `updated_at` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6)
+) CHARACTER SET utf8mb4;
+CREATE TABLE IF NOT EXISTS `users` (
+    `id` INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    `email` VARCHAR(191) NOT NULL UNIQUE,
+    `full_name` VARCHAR(191),
+    `is_active` BOOL NOT NULL DEFAULT 1
+) CHARACTER SET utf8mb4;
+CREATE TABLE IF NOT EXISTS `aerich` (
+    `id` INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    `version` VARCHAR(255) NOT NULL,
+    `app` VARCHAR(100) NOT NULL,
+    `content` JSON NOT NULL
+) CHARACTER SET utf8mb4;"""
+
+
+async def downgrade(db: BaseDBAsyncClient) -> str:
+    return """
+        """
+
+
+MODELS_STATE = (
+    "eJztmW1P2zAQgP9K1U8gdahkhbF9a0s3OrUNgrAhEIrcxG0tHDskDlAh/vtsJ2neM8roSF"
+    "E+tbmX+O5JcndOnpoWNSF29waWjekSwua3xlOTAEv8yehajSaw7UgjBAxMsTSGgZWUgqnL"
+    "HGAwrpgB7EIuMqFrOMhmiBIuJR7GQkgNbojIPBJ5BN15UGd0DtkCOlxxfcPFiJjwkZ88OL"
+    "Rv9RmC2EzEi0yxtpTrbGlL2ZCw79JQrDbVDYo9i0TG9pItKFlZI8KEdA4JdACD4vTM8UT4"
+    "Irog1TAjP9LIxA8x5mPCGfAwi6X7QgYGJYIfj8aVCc7FKp+U/c6XztHnw84RN5GRrCRfnv"
+    "30otx9R0lgojWfpR4w4FtIjBE3z4WOvha8mMffCYa8yhCGgohhdN9UCWIETf5miPUXwMlH"
+    "FtqnePEQK8rLAo86hmTOFvxw/+t+CZ1f3bP+Sfdsh1vtimwof/b9qjAJVIqvSyJ0KF4LYW"
+    "j/KoTBM/l+BNvtlxBst4sJCl2SIHJ1XmXRfQ7GHuW0ACkofnG/FM4pd9zULbkqjK8CWsKv"
+    "p6ojEbTlundYCoZaiuPFuDfggCVeboQYjB5s0VJmt7HiKARTYNw+AMfUMxqq0CLbrMpSrL"
+    "QEEDCXhESeIqug06qOKTtepgX7itL+S4VJ3Xzr5lvFSvjGvZdRBnCW2DE0kAVwPrWVT4qZ"
+    "6TvtBc7VbMYldI4H/eG4O+LdoaWkalvYVDqZvmE4UOSnA5ZDkWsYsmA+xqRnmmXguhf+qS"
+    "bNJs/BVAleBg9DCV1tOB6ca93xaaK5HHe1gdAoUrpMSXcOUy18dZLG76F20hCHjSt1MpAE"
+    "qcvmjlwxstOumiIm4DGqE/qgAzNW2EJpCCZxYT3bfOWFTXrWF/ZdL6wMviJDyalDTU9OE5"
+    "mxJFSVDia2b1SPJls3mtRb3H/e4sYjy5DU4GPBTZhy25INb1m5HVxqiUobUtsZdy93E9V2"
+    "pE5+hOYxyv2R2kvBtR1k5NygpWPgyqceA+sx8INMC/UY+EEvbJXGwAs3/9WUlJcOgOJ9RT"
+    "39bd30By2Acl6yFI9/K4e3mf82zm/z09+ML6yvO0UnnLZk8vsPLOtPHR/qU0cX8kF8kddQ"
+    "Ak1pSwGRTd1Ttqin3PNJIHcrXFwOYy7b+V5BOTh4QTXkVoXVUOqS1VA8GmtADMy3E+BGvp"
+    "zzFRkkOdujn+fqpGDPG7mkQF4QnuC1iQzWamDksptqYi2hKLIufz+TfhXTSu5txAl6791e"
+    "nv8AlppdEg=="
+)

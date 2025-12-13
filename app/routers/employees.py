@@ -1,0 +1,48 @@
+from fastapi import APIRouter, HTTPException
+from typing import List
+from app.models import Employee
+from app.schemas import EmployeeCreate, EmployeeRead
+
+router = APIRouter(prefix="/employees", tags=["employees"])
+
+
+@router.post("/", response_model=EmployeeRead)
+async def create_employee(payload: EmployeeCreate):
+    emp = await Employee.create(**payload.model_dump())
+
+    # ✅ Convert ORM object directly (NO re-query, NO error)
+    return EmployeeRead.model_validate(emp)
+
+@router.get("/", response_model=List[EmployeeRead])
+async def list_employees(skip: int = 0, limit: int = 100):
+    return await EmployeeRead.from_queryset(
+        Employee.all().offset(skip).limit(limit)
+    )
+
+@router.get("/{emp_id}", response_model=EmployeeRead)
+async def get_employee(emp_id: int):
+    emp = await Employee.get_or_none(id=emp_id)
+    if not emp:
+        raise HTTPException(status_code=404, detail="Employee not found")
+
+    return EmployeeRead.model_validate(emp)
+
+@router.patch("/{emp_id}", response_model=EmployeeRead)
+async def update_employee(emp_id: int, payload: EmployeeCreate):
+    emp = await Employee.get_or_none(id=emp_id)
+    if not emp:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    update_data = payload.model_dump(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(emp, key, value)
+    
+    await emp.save()
+    return EmployeeRead.model_validate(emp)
+
+
+@router.delete("/{emp_id}")
+async def delete_employee(emp_id: int):
+    deleted = await Employee.filter(id=emp_id).delete()
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    return {"deleted": True}
