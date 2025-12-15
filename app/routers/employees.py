@@ -1,24 +1,26 @@
 from fastapi import APIRouter, HTTPException
 from typing import List
 from app.models import Employee
-from app.schemas import EmployeeCreate, EmployeeRead
+from app.schemas import ApiResponse, EmployeeCreate, EmployeeRead
 
 router = APIRouter(prefix="/employees", tags=["employees"])
 
 
-@router.post("/", response_model=EmployeeRead)
+@router.post("/", response_model=ApiResponse[EmployeeRead])
 async def create_employee(payload: EmployeeCreate):
     emp = await Employee.create(**payload.model_dump())
-
     emp = (
         await Employee
         .get(id=emp.id)
         .select_related("user")
     )
+    return ApiResponse(
+        success=True,
+        message="Employee created successfully",
+        data=EmployeeRead.model_validate(emp),
+    )
 
-    return EmployeeRead.model_validate(emp)
-
-@router.get("/", response_model=List[EmployeeRead])
+@router.get("/", response_model=ApiResponse[List[EmployeeRead]])
 async def list_employees(skip: int = 0, limit: int = 100):
     employees = (
         await Employee
@@ -27,10 +29,13 @@ async def list_employees(skip: int = 0, limit: int = 100):
         .limit(limit)
         .select_related("user")
     )
+    return ApiResponse(
+        success=True,
+        message="Employees retrieved successfully",
+        data=[EmployeeRead.model_validate(e) for e in employees],
+    )
 
-    return [EmployeeRead.model_validate(e) for e in employees]
-
-@router.get("/{emp_id}", response_model=EmployeeRead)
+@router.get("/{emp_id}", response_model=ApiResponse[EmployeeRead])
 async def get_employee(emp_id: int):
     emp = (
         await Employee
@@ -39,10 +44,13 @@ async def get_employee(emp_id: int):
     )
     if not emp:
         raise HTTPException(status_code=404, detail="Employee not found")
+    return ApiResponse(
+        success=True,
+        message="Employee retrieved successfully",
+        data=EmployeeRead.model_validate(emp),
+    )
 
-    return EmployeeRead.model_validate(emp)
-
-@router.patch("/{emp_id}", response_model=EmployeeRead)
+@router.patch("/{emp_id}", response_model=ApiResponse[EmployeeRead])
 async def update_employee(emp_id: int, payload: EmployeeCreate):
     emp = await Employee.get_or_none(id=emp_id)
     if not emp:
@@ -57,12 +65,22 @@ async def update_employee(emp_id: int, payload: EmployeeCreate):
         .get(id=emp.id)
         .select_related("user")
     )
-    return EmployeeRead.model_validate(emp)
+    return ApiResponse(
+        success=True,
+        message="Employee updated successfully",
+        data=EmployeeRead.model_validate(emp),
+    )
 
-
-@router.delete("/{emp_id}")
+@router.delete("/{emp_id}", response_model=ApiResponse[dict])
 async def delete_employee(emp_id: int):
+    emp = await Employee.get_or_none(id=emp_id)
+    if not emp:
+        raise HTTPException(status_code=404, detail="Employee not found")
     deleted = await Employee.filter(id=emp_id).delete()
     if not deleted:
         raise HTTPException(status_code=404, detail="Employee not found")
-    return {"deleted": True}
+    return ApiResponse(
+        success=True,
+        message="Employee deleted successfully",
+        data={"deleted": True},
+    )

@@ -3,11 +3,11 @@ from fastapi import APIRouter, HTTPException
 from typing import List
 
 from app.models import Order, Product, OrderItem
-from app.schemas import OrderCreate, OrderRead, OrderUpdate
+from app.schemas import ApiResponse, OrderCreate, OrderRead, OrderUpdate
 
 router = APIRouter(prefix="/orders", tags=["orders"])
 
-@router.post("/", response_model=OrderRead)
+@router.post("/", response_model=ApiResponse[OrderRead])
 async def create_order(data: OrderCreate):
     async with in_transaction() as conn:
         order = await Order.create(
@@ -42,12 +42,14 @@ async def create_order(data: OrderCreate):
         .select_related("user")
         .prefetch_related("items", "items__product")
     )
+    return ApiResponse(
+        success=True,
+        message="Order created successfully",
+        data=OrderRead.model_validate(order),
+    )
 
-    return OrderRead.model_validate(order)
 
-
-
-@router.get("/", response_model=List[OrderRead])
+@router.get("/", response_model=ApiResponse[List[OrderRead]])
 async def list_orders(skip: int = 0, limit: int = 100):
     orders = (
         await Order
@@ -57,10 +59,13 @@ async def list_orders(skip: int = 0, limit: int = 100):
         .select_related("user")
         .prefetch_related("items", "items__product")
     )
-    return [OrderRead.model_validate(o) for o in orders]
+    return ApiResponse(
+        success=True,
+        message="Orders retrieved successfully",
+        data=[OrderRead.model_validate(o) for o in orders],
+    )
 
-
-@router.get("/{order_id}", response_model=OrderRead)
+@router.get("/{order_id}", response_model=ApiResponse[OrderRead])
 async def get_order(order_id: int):
 
     order = (
@@ -72,11 +77,13 @@ async def get_order(order_id: int):
 
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
+    return ApiResponse(
+        success=True,
+        message="Order retrieved successfully",
+        data=OrderRead.model_validate(order),
+    )
 
-    return OrderRead.model_validate(order)
-
-
-@router.patch("/{order_id}", response_model=OrderRead)
+@router.patch("/{order_id}", response_model=ApiResponse[OrderRead])
 async def update_order(order_id: int, payload: OrderUpdate):
 
     order = await Order.get_or_none(id=order_id)
@@ -115,15 +122,23 @@ async def update_order(order_id: int, payload: OrderUpdate):
         .select_related("user")
         .prefetch_related("items", "items__product")
     )
+    return ApiResponse(
+        success=True,
+        message="Order updated successfully",
+        data=OrderRead.model_validate(order),
+    )
 
-    return OrderRead.model_validate(order)
-
-
-@router.delete("/{order_id}")
+@router.delete("/{order_id}", response_model=ApiResponse[dict])
 async def delete_order(order_id: int):
-
+    order = await Order.get_or_none(id=order_id)
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
     deleted = await Order.filter(id=order_id).delete()
     if not deleted:
         raise HTTPException(status_code=404, detail="Order not found")
 
-    return {"deleted": True}
+    return ApiResponse(
+        success=True,
+        message="Order deleted successfully",
+        data={"deleted": True},
+    )
