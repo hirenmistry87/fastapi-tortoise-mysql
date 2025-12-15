@@ -1,64 +1,97 @@
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
 from decimal import Decimal
 from tortoise.contrib.pydantic import pydantic_model_creator
 
-from app.models import User, Employee, Product, Order
+from app.models import User, Employee, Product, Order, OrderItem
 
 
-# ---------- USER SCHEMAS ----------
-
-# ---------- INPUT SCHEMA ----------
+# ---------- USER ----------
 class UserCreate(BaseModel):
     email: str
     full_name: Optional[str] = None
-    is_active: Optional[bool] = True
+    is_active: bool = True
 
 
-# ---------- OUTPUT SCHEMA ----------
-UserRead = pydantic_model_creator(
-    User,
-    name="UserRead",
-)
+class UserRead(BaseModel):
+    id: int
+    email: str
+    full_name: str | None
+    is_active: bool
 
-# ---------- EMPLOYEE SCHEMAS ----------
+    model_config = {"from_attributes": True}
 
-# ---------- INPUT SCHEMA ----------
+# ---------- EMPLOYEE ----------
 class EmployeeCreate(BaseModel):
     user_id: int
     name: str
-    role: Optional[str]
-    is_active: Optional[bool] = True
+    role: Optional[str] = None
+    is_active: bool = True
 
-# ---------- OUTPUT SCHEMA ----------
-EmployeeRead = pydantic_model_creator(
-    Employee,
-    name="EmployeeRead",
-)
 
-# ---------- PRODUCT SCHEMAS ----------
+class EmployeeRead(BaseModel):
+    id: int
+    name: str
+    role: str | None
+    is_active: bool
+    user: UserRead
 
-# ---------- INPUT SCHEMA ----------
+    model_config = {"from_attributes": True}
+
+
+# ---------- PRODUCT ----------
 class ProductCreate(BaseModel):
     name: str
-    description: Optional[str]
+    description: Optional[str] = None
     price: Decimal
 
-# ---------- OUTPUT SCHEMA ----------
-ProductRead = pydantic_model_creator(
-    Product,
-    name="ProductRead",
-)
 
-# ---------- ORDER SCHEMAS ----------
+class ProductRead(BaseModel):
+    id: int
+    name: str
+    description: Optional[str] = None
+    price: Decimal
 
-# ---------- INPUT SCHEMA ----------
+    model_config = {"from_attributes": True}
+
+
+# ---------- ORDER ITEM ----------
+class OrderItemCreate(BaseModel):
+    product_id: int
+    quantity: int
+    price: Decimal
+
+
+class OrderItemRead(BaseModel):
+    id: int
+    quantity: int
+    price: Decimal
+    product: ProductRead
+
+    model_config = {"from_attributes": True}
+
+
+# ---------- ORDER ----------
 class OrderCreate(BaseModel):
-    user_id: Optional[int]
+    user_id: int
     total: Decimal
+    items: List[OrderItemCreate]
 
-# ---------- OUTPUT SCHEMA ----------
-OrderRead = pydantic_model_creator(
-    Order,
-    name="OrderRead",
-)  
+
+class OrderRead(BaseModel):
+    id: int
+    total: Decimal
+    user: UserRead | None
+    items: list[OrderItemRead]
+
+    model_config = {"from_attributes": True}
+
+class OrderItemUpdate(BaseModel):
+    product_id: int
+    quantity: int
+    price: Decimal
+
+class OrderUpdate(BaseModel):
+    user_id: Optional[int]
+    total: Optional[Decimal]
+    items: Optional[List[OrderItemUpdate]]  # <- make this optional
