@@ -7,12 +7,9 @@ from app.schemas import OrderCreate, OrderRead, OrderUpdate
 
 router = APIRouter(prefix="/orders", tags=["orders"])
 
-
 @router.post("/", response_model=OrderRead)
 async def create_order(data: OrderCreate):
-
     async with in_transaction() as conn:
-
         order = await Order.create(
             user_id=data.user_id,
             total=data.total,
@@ -46,7 +43,8 @@ async def create_order(data: OrderCreate):
         .prefetch_related("items", "items__product")
     )
 
-    return await OrderRead.from_tortoise_orm(order)
+    return OrderRead.model_validate(order)
+
 
 
 @router.get("/", response_model=List[OrderRead])
@@ -85,13 +83,32 @@ async def update_order(order_id: int, payload: OrderUpdate):
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
 
-    update_data = payload.model_dump(exclude_unset=True)
-
+    # Update order fields
+    update_data = payload.model_dump(exclude_unset=True, exclude={"items"})
     for key, value in update_data.items():
         setattr(order, key, value)
 
     await order.save()
 
+    # Update items if included
+    if payload.items:
+        for item in payload.items:
+            order_item = await OrderItem.get_or_none(order_id=order.id, product_id=item.product_id)
+            if order_item:
+                # Update existing item
+                order_item.quantity = item.quantity
+                order_item.price = item.price
+                await order_item.save()
+            else:
+                # Create new item
+                await OrderItem.create(
+                    order_id=order.id,
+                    product_id=item.product_id,
+                    quantity=item.quantity,
+                    price=item.price
+                )
+
+    # Reload order with relations for nested response
     order = (
         await Order
         .get(id=order.id)
@@ -99,7 +116,7 @@ async def update_order(order_id: int, payload: OrderUpdate):
         .prefetch_related("items", "items__product")
     )
 
-    return await OrderRead.from_tortoise_orm(order)
+    return OrderRead.model_validate(order)
 
 
 @router.delete("/{order_id}")

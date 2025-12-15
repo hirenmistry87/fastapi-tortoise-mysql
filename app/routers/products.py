@@ -13,9 +13,8 @@ async def create_product(payload: ProductCreate):
 
 @router.get("/", response_model=List[ProductRead])
 async def list_products(skip: int = 0, limit: int = 100):
-    return await ProductRead.from_queryset(
-        Product.all().offset(skip).limit(limit)
-    )
+    products = await Product.all().offset(skip).limit(limit)
+    return [ProductRead.model_validate(p) for p in products]
 
 @router.get("/{product_id}", response_model=ProductRead)
 async def get_product(product_id: int):

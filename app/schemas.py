@@ -49,6 +49,7 @@ class ProductCreate(BaseModel):
 class ProductRead(BaseModel):
     id: int
     name: str
+    description: Optional[str] = None
     price: Decimal
 
     model_config = {"from_attributes": True}
@@ -85,5 +86,12 @@ class OrderRead(BaseModel):
 
     model_config = {"from_attributes": True}
 
+class OrderItemUpdate(BaseModel):
+    product_id: int
+    quantity: int
+    price: Decimal
+
 class OrderUpdate(BaseModel):
-    total: Optional[Decimal] = None
+    user_id: Optional[int]
+    total: Optional[Decimal]
+    items: Optional[List[OrderItemUpdate]]  # <- make this optional

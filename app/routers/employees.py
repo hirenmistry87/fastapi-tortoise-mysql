@@ -10,7 +10,12 @@ router = APIRouter(prefix="/employees", tags=["employees"])
 async def create_employee(payload: EmployeeCreate):
     emp = await Employee.create(**payload.model_dump())
 
-    # ✅ Convert ORM object directly (NO re-query, NO error)
+    emp = (
+        await Employee
+        .get(id=emp.id)
+        .select_related("user")
+    )
+
     return EmployeeRead.model_validate(emp)
 
 @router.get("/", response_model=List[EmployeeRead])
