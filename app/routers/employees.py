@@ -9,7 +9,6 @@ router = APIRouter(prefix="/employees", tags=["employees"])
 @router.post("/", response_model=ApiResponse[EmployeeRead])
 async def create_employee(payload: EmployeeCreate):
     emp = await Employee.create(**payload.model_dump())
-
     emp = (
         await Employee
         .get(id=emp.id)
@@ -74,6 +73,9 @@ async def update_employee(emp_id: int, payload: EmployeeCreate):
 
 @router.delete("/{emp_id}", response_model=ApiResponse[dict])
 async def delete_employee(emp_id: int):
+    emp = await Employee.get_or_none(id=emp_id)
+    if not emp:
+        raise HTTPException(status_code=404, detail="Employee not found")
     deleted = await Employee.filter(id=emp_id).delete()
     if not deleted:
         raise HTTPException(status_code=404, detail="Employee not found")

@@ -70,6 +70,9 @@ async def update_user(user_id: int, payload: UserCreate):
 # ---------- DELETE ----------
 @router.delete("/{user_id}", response_model=ApiResponse[dict])
 async def delete_user(user_id: int):
+    user = await User.get_or_none(id=user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
     deleted = await User.filter(id=user_id).delete()
     if not deleted:
         raise HTTPException(status_code=404, detail="User not found")

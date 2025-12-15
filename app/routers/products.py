@@ -52,6 +52,9 @@ async def update_product(product_id: int, payload: ProductCreate):
 
 @router.delete("/{product_id}", response_model=ApiResponse[dict])
 async def delete_product(product_id: int):
+    p = await Product.get_or_none(id=product_id)
+    if not p:
+        raise HTTPException(status_code=404, detail="Product not found")
     deleted = await Product.filter(id=product_id).delete()
     if not deleted:
         raise HTTPException(status_code=404, detail="Product not found")

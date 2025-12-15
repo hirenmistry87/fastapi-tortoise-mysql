@@ -130,7 +130,9 @@ async def update_order(order_id: int, payload: OrderUpdate):
 
 @router.delete("/{order_id}", response_model=ApiResponse[dict])
 async def delete_order(order_id: int):
-
+    order = await Order.get_or_none(id=order_id)
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
     deleted = await Order.filter(id=order_id).delete()
     if not deleted:
         raise HTTPException(status_code=404, detail="Order not found")
