@@ -1,8 +1,10 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from typing import List
 from app.models import User
 from app.schemas import ApiResponse,UserCreate, UserRead    
 from tortoise.exceptions import IntegrityError
+from app.core.pagination import paginate_offset, paginate_cursor, PaginatedResponse
+from app.core.orm_protection import protect_queryset
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -26,17 +28,20 @@ async def create_user(payload: UserCreate):
     )
 
 
-@router.get("/", response_model=ApiResponse[list[UserRead]])
-async def list_users(skip: int = 0, limit: int = 100):
-
-    users = await User.all().offset(skip).limit(limit)
-    data = [UserRead.model_validate(u) for u in users]
-    return ApiResponse(
-        success=True,
-        message="Users retrieved successfully",
-        data=data,
+@router.get("/", response_model=PaginatedResponse[UserRead])
+async def list_users(skip: int = 0, limit: int = 10):
+    queryset = protect_queryset(
+        User.all(),
+        prefetch=["orders"],
     )
 
+    users, meta = await paginate_offset(queryset, skip=skip, limit=limit)
+
+    return PaginatedResponse(
+        message="Users fetched successfully",
+        data=[UserRead.model_validate(u) for u in users],
+        meta=meta,
+    )
 
 @router.get("/{user_id}", response_model=ApiResponse[UserRead])
 async def get_user(user_id: int):

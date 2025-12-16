@@ -1,9 +1,11 @@
 from tortoise.transactions import in_transaction
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from typing import List
 
 from app.models import Order, Product, OrderItem
 from app.schemas import ApiResponse, OrderCreate, OrderRead, OrderUpdate
+from app.core.pagination import paginate_cursor, PaginatedResponse
+from app.core.orm_protection import protect_queryset
 
 router = APIRouter(prefix="/orders", tags=["orders"])
 
@@ -49,21 +51,29 @@ async def create_order(data: OrderCreate):
     )
 
 
-@router.get("/", response_model=ApiResponse[List[OrderRead]])
-async def list_orders(skip: int = 0, limit: int = 100):
-    orders = (
-        await Order
-        .all()
-        .offset(skip)
-        .limit(limit)
-        .select_related("user")
-        .prefetch_related("items", "items__product")
+@router.get("/", response_model=PaginatedResponse[OrderRead])
+async def list_orders(
+    cursor: int | None = Query(None),
+    limit: int = Query(10),
+):
+    queryset = protect_queryset(
+        Order.all(),
+        select=["user"],
+        prefetch=["items__product"],
     )
-    return ApiResponse(
-        success=True,
-        message="Orders retrieved successfully",
+
+    orders, meta = await paginate_cursor(
+        queryset,
+        cursor=cursor,
+        limit=limit,
+    )
+
+    return PaginatedResponse(
+        message="Orders fetched successfully",
         data=[OrderRead.model_validate(o) for o in orders],
+        meta=meta,
     )
+
 
 @router.get("/{order_id}", response_model=ApiResponse[OrderRead])
 async def get_order(order_id: int):

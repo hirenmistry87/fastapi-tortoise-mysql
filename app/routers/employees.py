@@ -1,7 +1,9 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from typing import List
 from app.models import Employee
 from app.schemas import ApiResponse, EmployeeCreate, EmployeeRead
+from app.core.orm_protection import protect_queryset
+from app.core.pagination import paginate_offset,PaginatedResponse
 
 router = APIRouter(prefix="/employees", tags=["employees"])
 
@@ -20,19 +22,26 @@ async def create_employee(payload: EmployeeCreate):
         data=EmployeeRead.model_validate(emp),
     )
 
-@router.get("/", response_model=ApiResponse[List[EmployeeRead]])
-async def list_employees(skip: int = 0, limit: int = 100):
-    employees = (
-        await Employee
-        .all()
-        .offset(skip)
-        .limit(limit)
-        .select_related("user")
+@router.get("/", response_model=PaginatedResponse[EmployeeRead])
+async def list_employees(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(10, ge=1, le=100),
+):
+    queryset = protect_queryset(
+        Employee.all(),
+        select=["user"],  # 🔥 REQUIRED
     )
-    return ApiResponse(
-        success=True,
-        message="Employees retrieved successfully",
+
+    employees, meta = await paginate_offset(
+        queryset,
+        skip=skip,
+        limit=limit,
+    )
+
+    return PaginatedResponse(
+        message="Employees fetched successfully",
         data=[EmployeeRead.model_validate(e) for e in employees],
+        meta=meta,
     )
 
 @router.get("/{emp_id}", response_model=ApiResponse[EmployeeRead])

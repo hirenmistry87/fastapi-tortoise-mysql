@@ -11,11 +11,11 @@ class Order(models.Model):
     user: fields.ForeignKeyRelation["User"] = fields.ForeignKeyField(
         "models.User",
         related_name="orders",
-        null=True
+        index=True
     )
 
     total = fields.DecimalField(max_digits=10, decimal_places=2)
-    created_at = fields.DatetimeField(auto_now_add=True)
+    created_at = fields.DatetimeField(auto_now_add=True,index=True)
     updated_at = fields.DatetimeField(auto_now=True)
 
     items: fields.ReverseRelation["OrderItem"]

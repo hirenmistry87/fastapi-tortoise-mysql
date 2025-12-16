@@ -2,6 +2,8 @@ from fastapi import APIRouter, HTTPException
 from typing import List
 from app.models import Product
 from app.schemas import ApiResponse,ProductCreate, ProductRead
+from app.core.pagination import paginate_offset, paginate_cursor, PaginatedResponse
+from app.core.orm_protection import protect_queryset
 
 router = APIRouter(prefix="/products", tags=["products"])
 
@@ -14,13 +16,19 @@ async def create_product(payload: ProductCreate):
         data=ProductRead.model_validate(p),
     )
     
-@router.get("/", response_model=ApiResponse[List[ProductRead]])
-async def list_products(skip: int = 0, limit: int = 100):
-    products = await Product.all().offset(skip).limit(limit)
-    return ApiResponse(
-        success=True,
-        message="Products retrieved successfully",
+@router.get("/", response_model=PaginatedResponse[ProductRead])
+async def list_products(skip: int = 0, limit: int = 10):
+    queryset = protect_queryset(
+        Product.all(),
+        prefetch=["order_items"],
+    )
+
+    products, meta = await paginate_offset(queryset, skip=skip, limit=limit)
+
+    return PaginatedResponse(
+        message="Products fetched successfully",
         data=[ProductRead.model_validate(p) for p in products],
+        meta=meta,
     )
 
 @router.get("/{product_id}", response_model=ApiResponse[ProductRead])
